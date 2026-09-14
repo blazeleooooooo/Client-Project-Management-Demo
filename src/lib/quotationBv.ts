@@ -1,0 +1,75 @@
+import type { ProjectHubRelatedType } from '@/lib/projectsHub';
+
+export const QUOTATION_BV_TABLE = 'quotation_bv';
+export const QUOTATION_BV_WITH_COMPANY_VIEW = 'quotation_bv_with_company';
+export const BV_RATIO_TOTAL = 100;
+export const COMPANY_BV_RATIO = 30;
+export const COMPANY_BV_LABEL = 'Branding Works';
+export const STAFF_BV_POOL = BV_RATIO_TOTAL - COMPANY_BV_RATIO;
+export const BV_SOURCE_RELATED_TYPES = ['quotation_client', 'webandsystem'] as const;
+export type BvSourceRelatedType = (typeof BV_SOURCE_RELATED_TYPES)[number];
+
+export function isBvSourceRelatedType(
+  value: string | undefined | null,
+): value is BvSourceRelatedType {
+  return !!value && (BV_SOURCE_RELATED_TYPES as readonly string[]).includes(value);
+}
+
+export type QuotationBvRecord = {
+  id: string;
+  projectId: string;
+  staffId: string;
+  staffName: string;
+  bvRatio: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuotationBvSource = {
+  relatedType: ProjectHubRelatedType;
+  relatedId: string;
+};
+
+export type QuotationBvInput = {
+  staffId: string;
+  bvRatio: number;
+};
+
+export function roundBvRatio(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function parseBvRatio(raw: string | number): number | null {
+  const value = typeof raw === 'number' ? raw : Number(String(raw).trim());
+  if (!Number.isFinite(value)) return null;
+  const rounded = roundBvRatio(value);
+  if (rounded <= 0 || rounded > STAFF_BV_POOL) return null;
+  return rounded;
+}
+
+export function sumBvRatios(ratios: Array<number | null | undefined>): number {
+  return roundBvRatio(
+    ratios.reduce<number>((sum, value) => sum + (typeof value === 'number' && Number.isFinite(value) ? value : 0), 0),
+  );
+}
+
+export function remainingStaffBvRatio(ratios: Array<number | null | undefined>): number {
+  return roundBvRatio(Math.max(0, STAFF_BV_POOL - sumBvRatios(ratios)));
+}
+
+export function wouldExceedStaffBvPool(otherRatiosSum: number, nextRatio: number): boolean {
+  return roundBvRatio(otherRatiosSum + nextRatio) > STAFF_BV_POOL;
+}
+
+export function projectBvTotal(staffRatios: Array<number | null | undefined>): number {
+  return roundBvRatio(COMPANY_BV_RATIO + sumBvRatios(staffRatios));
+}
+
+export function isStaffBvComplete(staffRatios: Array<number | null | undefined>): boolean {
+  return sumBvRatios(staffRatios) === STAFF_BV_POOL;
+}
+
+/** One-shot remap from the old 100% staff pool onto the 70% staff pool. */
+export function scaleLegacyStaffBvRatio(value: number): number {
+  return Math.max(0.01, roundBvRatio((value * STAFF_BV_POOL) / BV_RATIO_TOTAL));
+}

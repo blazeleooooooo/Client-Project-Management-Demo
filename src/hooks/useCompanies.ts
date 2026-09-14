@@ -1,0 +1,149 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Company } from '@/types/app';
+import { companies as staticCompanies } from '@/data/mockData';
+import { QUERY_CACHE_KEYS, cachedQuery, invalidateCachedQuery, isAbortError, peekCachedQuery } from '@/lib/queryCache';
+
+type DbRow = {
+  id: string;
+  uuid: string | null;
+  company_code: string;
+  company_name_zh: string;
+  company_name_en: string;
+  br_no: string;
+  bank_name: string;
+  bank_account: string;
+  address: string;
+  contact_person: string;
+  contact_phone: string;
+  contact_email: string;
+  logo_url: string | null;
+  chop_url: string | null;
+  bank_notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapRow(row: DbRow): Company {
+  return {
+    id: row.id,
+    uuid: row.uuid || row.id,
+    companyCode: row.company_code,
+    companyNameZh: row.company_name_zh,
+    companyNameEn: row.company_name_en,
+    brNo: row.br_no,
+    bankName: row.bank_name,
+    bankAccount: row.bank_account,
+    address: row.address,
+    contactPerson: row.contact_person,
+    contactPhone: row.contact_phone,
+    contactEmail: row.contact_email,
+    logoUrl: row.logo_url ?? '',
+    chopUrl: row.chop_url ?? '',
+    bankNotes: row.bank_notes ?? '',
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function fetchCompanies(): Promise<Company[]> {
+  const { data, error } = await supabase
+    .from('company_list')
+    .select('*')
+    .order('company_code');
+  if (error) throw error;
+  if (!data || data.length === 0) return staticCompanies as Company[];
+  return (data as DbRow[]).map(mapRow);
+}
+
+export function useCompanies() {
+  const cached = peekCachedQuery<Company[]>(QUERY_CACHE_KEYS.companies);
+  const [companies, setCompanies] = useState<Company[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void cachedQuery(QUERY_CACHE_KEYS.companies, fetchCompanies)
+      .then((rows) => {
+        if (cancelled) return;
+        setCompanies(rows);
+        setLoading(false);
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        if (!isAbortError(err)) {
+          setError(err.message);
+          setCompanies(staticCompanies as Company[]);
+        }
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const addCompany = useCallback(async (company: Company) => {
+    const row = {
+      id: company.id,
+      uuid: company.uuid || undefined,
+      company_code: company.companyCode,
+      company_name_zh: company.companyNameZh,
+      company_name_en: company.companyNameEn,
+      br_no: company.brNo,
+      bank_name: company.bankName,
+      bank_account: company.bankAccount,
+      address: company.address,
+      contact_person: company.contactPerson,
+      contact_phone: company.contactPhone,
+      contact_email: company.contactEmail,
+      logo_url: company.logoUrl || null,
+      chop_url: company.chopUrl || null,
+      bank_notes: company.bankNotes || null,
+      is_active: company.isActive,
+    };
+    const { error } = await supabase.from('company_list').insert(row);
+    if (!error) {
+      invalidateCachedQuery(QUERY_CACHE_KEYS.companies);
+      setCompanies(prev => [...prev, company]);
+    }
+    return error;
+  }, []);
+
+  const updateCompany = useCallback(async (id: string, updates: Partial<Company>) => {
+    const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (updates.companyNameZh !== undefined) row.company_name_zh = updates.companyNameZh;
+    if (updates.companyNameEn !== undefined) row.company_name_en = updates.companyNameEn;
+    if (updates.brNo !== undefined) row.br_no = updates.brNo;
+    if (updates.bankName !== undefined) row.bank_name = updates.bankName;
+    if (updates.bankAccount !== undefined) row.bank_account = updates.bankAccount;
+    if (updates.address !== undefined) row.address = updates.address;
+    if (updates.contactPerson !== undefined) row.contact_person = updates.contactPerson;
+    if (updates.contactPhone !== undefined) row.contact_phone = updates.contactPhone;
+    if (updates.contactEmail !== undefined) row.contact_email = updates.contactEmail;
+    if (updates.logoUrl !== undefined) row.logo_url = updates.logoUrl || null;
+    if (updates.chopUrl !== undefined) row.chop_url = updates.chopUrl || null;
+    if (updates.bankNotes !== undefined) row.bank_notes = updates.bankNotes || null;
+    if (updates.isActive !== undefined) row.is_active = updates.isActive;
+
+    const { error } = await supabase.from('company_list').update(row).eq('id', id);
+    if (!error) {
+      invalidateCachedQuery(QUERY_CACHE_KEYS.companies);
+      setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    }
+    return error;
+  }, []);
+
+  const deleteCompany = useCallback(async (id: string) => {
+    const { error } = await supabase.from('company_list').delete().eq('id', id);
+    if (!error) {
+      invalidateCachedQuery(QUERY_CACHE_KEYS.companies);
+      setCompanies(prev => prev.filter(c => c.id !== id));
+    }
+    return error;
+  }, []);
+
+  return { companies, loading, error, addCompany, updateCompany, deleteCompany };
+}

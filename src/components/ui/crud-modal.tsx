@@ -1,0 +1,128 @@
+import { ReactNode } from 'react';
+import { X, AlertTriangle } from 'lucide-react';
+import { FixedOverlay } from '@/components/ui/fixed-overlay';
+import { CrudModalFooter, splitModalChrome } from '@/components/ui/modal-layout';
+
+export { CrudModalFooter };
+
+interface CrudModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  headerActions?: ReactNode;
+  footer?: ReactNode;
+}
+
+export function CrudModal({ isOpen, onClose, title, children, size = 'md', headerActions, footer }: CrudModalProps) {
+  if (!isOpen) return null;
+
+  const sizeClass =
+    size === 'sm'
+      ? 'max-w-[400px] max-h-[85vh]'
+      : size === 'lg'
+        ? 'max-w-[700px] max-h-[85vh]'
+        : size === 'xl'
+          ? 'max-w-[780px] max-h-[92vh] min-h-[min(720px,92vh)]'
+          : size === '2xl'
+            ? 'max-w-[960px] max-h-[92vh] min-h-[min(560px,92vh)]'
+            : 'max-w-[550px] max-h-[85vh]';
+
+  const split = splitModalChrome(children);
+  const resolvedFooter = footer ?? split.footer;
+
+  return (
+    <FixedOverlay className="flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClass} mx-4 flex flex-col overflow-hidden`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h2 className="text-[16px] font-bold">{title}</h2>
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+        <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0">
+          {split.body}
+        </div>
+        {resolvedFooter ? (
+          <div className="shrink-0 px-6 py-3 border-t border-border bg-white">
+            {resolvedFooter}
+          </div>
+        ) : null}
+      </div>
+      {split.extras}
+    </FixedOverlay>
+  );
+}
+
+interface DeleteConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  itemName: string;
+  canDelete: boolean;
+  reasons?: string[];
+  description?: string;
+}
+
+export function DeleteConfirmModal({ isOpen, onClose, onConfirm, itemName, canDelete, reasons = [], description }: DeleteConfirmModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <FixedOverlay className="flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-[420px] mx-4">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${canDelete ? 'bg-rose-100' : 'bg-amber-100'}`}>
+              <AlertTriangle size={20} className={canDelete ? 'text-rose-600' : 'text-amber-600'} />
+            </div>
+            <div>
+              <h3 className="text-[15px] font-bold">{canDelete ? '確認刪除' : '無法刪除'}</h3>
+              <p className="text-[12px] text-muted-foreground">{itemName}</p>
+            </div>
+          </div>
+
+          {canDelete ? (
+            <p className="text-[13px] text-muted-foreground mb-6">
+              {description || (
+                <>
+                  確定要刪除 <span className="font-medium text-foreground">「{itemName}」</span> 嗎？此操作無法撤銷。
+                </>
+              )}
+            </p>
+          ) : (
+            <div className="space-y-2 mb-6">
+              {reasons.map((reason, idx) => (
+                <p key={idx} className="text-[13px] text-amber-800 bg-amber-50 px-3 py-2 rounded border border-amber-200">
+                  {reason}
+                </p>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-[13px] font-medium text-muted-foreground bg-secondary rounded-md hover:bg-secondary/80 transition-colors"
+            >
+              {canDelete ? '取消' : '了解'}
+            </button>
+            {canDelete && (
+              <button
+                onClick={onConfirm}
+                className="px-4 py-2 text-[13px] font-medium text-white bg-rose-600 rounded-md hover:bg-rose-700 transition-colors"
+              >
+                確認刪除
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </FixedOverlay>
+  );
+}

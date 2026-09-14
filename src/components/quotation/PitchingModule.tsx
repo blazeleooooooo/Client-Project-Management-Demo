@@ -1,0 +1,1430 @@
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { Search, Plus, FileText, MessageSquare, ArrowLeft, Link2, Save, X, DollarSign, User, Pencil, Clock, FolderOpen, Wallet, Banknote, PieChart } from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { useQuotationSection } from '@/context/QuotationSectionContext';
+import { filterBySectionProjectTypes, mergeScopedProjectTypes } from '@/lib/quotationSectionScope';
+import { useQuotationClientProjects, type QuotationClientProjectUpdate } from '@/hooks/useQuotationClientProjects';
+import { useQuotationClientList } from '@/hooks/useQuotationClientList';
+import { useActiveStaffOptions, type StaffSelectOption } from '@/hooks/useActiveStaffOptions';
+import {
+  toQuotationClientSelectOption,
+  type QuotationClient,
+  type QuotationClientInput,
+  type QuotationClientSelectOption,
+} from '@/data/quotationClientList';
+import { useQuotationClientDetailId } from '@/hooks/useQuotationClientDetailId';
+import {
+  closeInvoiceReceiptEditor,
+  openInvoiceReceiptEditor,
+  openQuotationProjectDetail,
+  quotationProjectSubModule,
+  readInvoiceReceiptDoc,
+  readQuotationClientPage,
+  type InvoiceReceiptDocKind,
+} from '@/lib/quotationProjectNavigation';
+import { InvoiceEditor } from '@/components/quotation/InvoiceEditor';
+import { ReceiptEditor } from '@/components/quotation/ReceiptEditor';
+import { ClientFormModal } from '@/components/crm/ClientFormModal';
+import { ClientWebsiteSelectField } from '@/components/quotation/ClientWebsiteSelectField';
+import { CrudModal } from '@/components/ui/crud-modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import {
+  pitchingStatusConfig,
+  PITCHING_STATUS_OPTIONS,
+  calcClientProjectProgress,
+  calcRemainingDays,
+  clientProjectProgressConfig,
+  formatProjectTypes,
+  formatMainPmName,
+  formatRelatedClientName,
+  matchesProjectTypeFilter,
+  projectTypesNeedWebsiteLink,
+  optionalIsoDate,
+  resolvePitchingFormClient,
+  type PitchingRecord,
+  type PitchingStatus,
+  type PitchingProjectType,
+  type PitchingExpenseItem,
+} from '@/data/pitchingData';
+import { PitchingBudgetTab } from '@/components/quotation/PitchingBudgetTab';
+import { PitchingDocsTab } from '@/components/quotation/PitchingDocsTab';
+import { PitchingIncomeTab } from '@/components/quotation/PitchingIncomeTab';
+import { PitchingExpenseTab } from '@/components/quotation/PitchingExpenseTab';
+import { PitchingCostAnalysisTab } from '@/components/quotation/PitchingCostAnalysisTab';
+import { PitchingFollowUpsTab } from '@/components/quotation/PitchingFollowUpsTab';
+import { PitchingWorkHoursTab } from '@/components/quotation/PitchingWorkHoursTab';
+import { PitchingStatusConversionModal } from '@/components/quotation/PitchingStatusConversionModal';
+import { allowedStatusTargets, isAllowedStatusTransition, needsConversionPopup } from '@/lib/clientProjectStatus';
+import { QuotationBvCard } from '@/components/quotation/QuotationBvCard';
+import { PitchingInfoMetricsRow } from '@/components/quotation/PitchingInfoMetricsRow';
+import {
+  QuotationClientProjectTableHeaders,
+  QuotationListMoneyCells,
+  useQuotationListSort,
+} from '@/components/quotation/QuotationListSortHeader';
+import { estimatedMoneyFor, QUOTATION_LIST_COLUMN_COUNT } from '@/lib/quotationListMoney';
+import { toExternalHref } from '@/lib/externalUrl';
+
+export type PitchingFormValues = {
+  clientId: string;
+  clientName: string;
+  displayName: string;
+  inquiryDate: string;
+  signedDate: string;
+  handoverDate: string;
+  description: string;
+  projectTypes: PitchingProjectType[];
+  mainPmId: string;
+  webandsystemListId: string;
+  asanaLink: string;
+};
+
+export type ClientOption = QuotationClientSelectOption;
+
+function companyNamesForClient(clientId: string, clientOptions: ClientOption[]) {
+  const client = clientOptions.find((c) => c.value === clientId);
+  return {
+    companyNameZh: client?.companyNameZh ?? '',
+    companyNameEn: client?.companyNameEn ?? '',
+  };
+}
+
+const todayIso = () => new Date().toISOString().split('T')[0]!;
+
+const emptyForm = (defaultMainPmId = ''): PitchingFormValues => ({
+  clientId: '',
+  clientName: '',
+  displayName: '',
+  inquiryDate: todayIso(),
+  signedDate: '',
+  handoverDate: '',
+  description: '',
+  projectTypes: [],
+  mainPmId: defaultMainPmId,
+  webandsystemListId: '',
+  asanaLink: '',
+});
+
+function formFromRecord(record: PitchingRecord, clientOptions: ClientOption[]): PitchingFormValues {
+  const { clientId, clientName } = resolvePitchingFormClient(record, clientOptions);
+  return {
+    clientId,
+    clientName,
+    displayName: record.displayName,
+    inquiryDate: record.inquiryDate,
+    signedDate: optionalIsoDate(record.signedDate) ?? '',
+    handoverDate: optionalIsoDate(record.handoverDate) ?? '',
+    description: record.description ?? '',
+    projectTypes: record.projectTypes,
+    mainPmId: record.mainPmId ?? '',
+    webandsystemListId: record.webandsystemListId ?? '',
+    asanaLink: record.asanaLink ?? '',
+  };
+}
+
+export function pitchingFormToUpdate(form: PitchingFormValues): QuotationClientProjectUpdate {
+  return {
+    clientId: form.clientId.trim(),
+    clientName: form.clientName.trim(),
+    displayName: form.displayName.trim(),
+    inquiryDate: form.inquiryDate,
+    signedDate: form.signedDate,
+    handoverDate: form.handoverDate,
+    description: form.description.trim() || undefined,
+    projectTypes: form.projectTypes,
+    mainPmId: form.mainPmId.trim(),
+    webandsystemListId: form.webandsystemListId.trim(),
+    asanaLink: form.asanaLink.trim() || undefined,
+  };
+}
+
+function formatEnquiryDateLabel(iso: string): string {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  const [y, m, d] = parts;
+  return `${y}年${parseInt(m!, 10)}月${parseInt(d!, 10)}日`;
+}
+
+export function PitchingStatusBadge({
+  status,
+  className,
+}: {
+  status: PitchingStatus;
+  className?: string;
+}) {
+  const config = pitchingStatusConfig[status];
+  return (
+    <span className={cn('inline-block text-[12px] font-medium px-2 py-1 rounded-sm whitespace-nowrap', config.bgColor, config.color, className)}>
+      {config.label}
+    </span>
+  );
+}
+
+export function PitchingStatusSelect({
+  value,
+  onChange,
+  allowedTargets,
+  className,
+}: {
+  value: PitchingStatus;
+  onChange: (status: PitchingStatus) => void;
+  allowedTargets?: PitchingStatus[];
+  className?: string;
+}) {
+  const config = pitchingStatusConfig[value];
+  const options = allowedTargets
+    ? Array.from(new Set([value, ...allowedTargets]))
+    : PITCHING_STATUS_OPTIONS;
+  return (
+    <select
+      value={value}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value as PitchingStatus)}
+      className={cn(
+        'text-[12px] font-medium px-2 py-1 rounded-sm border border-transparent cursor-pointer whitespace-nowrap',
+        'hover:ring-1 hover:ring-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-500',
+        config.bgColor,
+        config.color,
+        className,
+      )}
+      aria-label="變更狀態"
+    >
+      {options.map((status) => (
+        <option key={status} value={status}>
+          {pitchingStatusConfig[status].label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function ProjectDisplayNameCell({ record }: { record: PitchingRecord }) {
+  const pitchingCode = record.pitchingId !== record.id ? record.pitchingId : '';
+  return (
+    <td className="px-4 py-3">
+      <div className="text-[14px] font-medium">{record.displayName}</div>
+      {pitchingCode ? (
+        <p className="text-[11px] text-muted-foreground mt-0.5">{pitchingCode}</p>
+      ) : null}
+    </td>
+  );
+}
+
+function AsanaLogoIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="5.2" r="3.2" fill="currentColor" />
+      <circle cx="6.4" cy="16.8" r="3.2" fill="currentColor" />
+      <circle cx="17.6" cy="16.8" r="3.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+const listActionIconClass =
+  'p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors inline-flex';
+const listActionIconDisabledClass = 'p-1.5 rounded-md text-muted-foreground/30 inline-flex';
+
+export function ProjectListActionCell({
+  record,
+  onEdit,
+}: {
+  record: PitchingRecord;
+  onEdit: (record: PitchingRecord) => void;
+}) {
+  const asanaRaw = record.asanaLink?.trim() || '';
+  const asanaHref = asanaRaw
+    ? toExternalHref(asanaRaw)
+    : record.asanaTaskGid
+      ? `https://app.asana.com/0/0/${record.asanaTaskGid}`
+      : '';
+
+  return (
+    <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1">
+        {asanaHref ? (
+          <a
+            href={asanaHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${listActionIconClass} text-[#F06A6A] hover:text-[#F06A6A]`}
+            aria-label="開啟 Asana"
+          >
+            <AsanaLogoIcon />
+          </a>
+        ) : (
+          <span className={listActionIconDisabledClass} aria-disabled="true" title="尚未設定 Asana 連結">
+            <AsanaLogoIcon />
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => onEdit(record)}
+          className={listActionIconClass}
+          aria-label={`編輯 ${record.displayName}`}
+        >
+          <Pencil size={13} />
+        </button>
+      </div>
+    </td>
+  );
+}
+
+export function RemainingDaysCell({
+  inquiryDate,
+  status,
+  signedDate,
+  handoverDate,
+}: {
+  inquiryDate: string;
+  status: PitchingStatus;
+  signedDate?: string;
+  handoverDate?: string;
+}) {
+  if (status === 'confirmed') {
+    const progress = calcClientProjectProgress(signedDate, handoverDate);
+    if (!progress) return <span className="text-muted-foreground">—</span>;
+    const config = clientProjectProgressConfig[progress];
+    return (
+      <span className={cn('text-[12px] font-medium px-2 py-1 rounded-sm', config.bgColor, config.color)}>
+        {config.label}
+      </span>
+    );
+  }
+
+  const days = calcRemainingDays(inquiryDate, status);
+  if (days === null) return <span className="text-muted-foreground">—</span>;
+  const color =
+    days <= 0 ? 'text-rose-600 font-semibold' : days <= 7 ? 'text-amber-600 font-medium' : 'text-foreground';
+  return <span className={cn('tabular-nums', color)}>{days <= 0 ? `逾期 ${Math.abs(days)} 天` : `${days} 天`}</span>;
+}
+
+function ProjectTypeMultiSelect({
+  value,
+  onChange,
+}: {
+  value: PitchingProjectType[];
+  onChange: (next: PitchingProjectType[]) => void;
+}) {
+  const { typeOptions } = useQuotationSection();
+  const optionIds = new Set(typeOptions.map((opt) => opt.id));
+  const visibleValue = value.filter((type) => optionIds.has(type));
+  const hiddenValue = value.filter((type) => !optionIds.has(type));
+
+  const toggle = (id: PitchingProjectType) => {
+    const nextVisible = visibleValue.includes(id)
+      ? visibleValue.filter((type) => type !== id)
+      : [...visibleValue, id];
+    onChange([...nextVisible, ...hiddenValue]);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {typeOptions.map((opt) => {
+          const selected = visibleValue.includes(opt.id);
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => toggle(opt.id)}
+              className={cn(
+                'px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+                selected
+                  ? 'bg-teal-50 border-teal-300 text-teal-800'
+                  : 'bg-white border-border text-muted-foreground hover:bg-muted/40',
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+      {visibleValue.length > 0 && (
+        <p className="text-[11px] text-muted-foreground">已選：{formatProjectTypes(visibleValue)}</p>
+      )}
+    </div>
+  );
+}
+
+export function PitchingFormModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  clientOptions,
+  staffOptions,
+  defaultMainPmId,
+  defaultValues,
+  defaultsKey,
+  createTitle,
+  initialRecord,
+  onCreateClient,
+  hideWebsiteField = false,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (form: PitchingFormValues) => void | Promise<void>;
+  clientOptions: ClientOption[];
+  staffOptions: StaffSelectOption[];
+  defaultMainPmId?: string;
+  /** Prefills create mode (e.g. Asana import). Ignored when editing. */
+  defaultValues?: Partial<PitchingFormValues> | null;
+  defaultsKey?: string;
+  createTitle?: string;
+  initialRecord?: PitchingRecord | null;
+  onCreateClient?: (input: QuotationClientInput) => Promise<QuotationClient | null>;
+  /** Hide the website/system picker when creating a project from the website dialog. */
+  hideWebsiteField?: boolean;
+}) {
+  const [form, setForm] = useState<PitchingFormValues>(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [showQuickAddClient, setShowQuickAddClient] = useState(false);
+  const [savingClient, setSavingClient] = useState(false);
+  const isEdit = Boolean(initialRecord);
+  const isAsanaImport = Boolean(defaultsKey || defaultValues) && !isEdit;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialRecord) {
+      setForm(formFromRecord(initialRecord, clientOptions));
+    } else {
+      const fallbackPm = defaultMainPmId ?? '';
+      setForm({
+        ...emptyForm(fallbackPm),
+        ...defaultValues,
+        mainPmId: defaultValues?.mainPmId?.trim() || fallbackPm,
+      });
+    }
+    setShowQuickAddClient(false);
+    // Only reset when the dialog opens or the source row changes — not when the client list refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialRecord?.id, defaultsKey]);
+
+  const handleClose = () => {
+    setForm(emptyForm(defaultMainPmId ?? ''));
+    setShowQuickAddClient(false);
+    onClose();
+  };
+
+  const applyClient = (clientId: string, clientName: string) => {
+    setForm((prev) => ({
+      ...prev,
+      clientId,
+      clientName,
+      displayName: prev.displayName || clientName,
+    }));
+  };
+
+  const handleClientChange = (clientId: string) => {
+    const client = clientOptions.find((c) => c.value === clientId);
+    applyClient(clientId, client?.label ?? '');
+  };
+
+  const handleQuickAddClient = async (input: QuotationClientInput) => {
+    if (!onCreateClient) return null;
+    setSavingClient(true);
+    try {
+      const client = await onCreateClient(input);
+      if (!client) {
+        toast.error('儲存客戶失敗');
+        return null;
+      }
+      const option = toQuotationClientSelectOption(client);
+      applyClient(client.id, option.label);
+      return client;
+    } finally {
+      setSavingClient(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!isEdit && !form.clientId.trim()) {
+      toast.error('請選擇客戶');
+      return;
+    }
+    if (!form.displayName.trim()) {
+      toast.error('請填寫顯示名稱');
+      return;
+    }
+    if (!form.inquiryDate) {
+      toast.error('請選擇查詢日期');
+      return;
+    }
+    if (form.projectTypes.length === 0) {
+      toast.error('請至少選擇一個專案類型');
+      return;
+    }
+    if (!form.mainPmId.trim()) {
+      toast.error('請選擇負責 PM');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSubmit(form);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <>
+    <CrudModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={
+        isEdit
+          ? '編輯提案 Edit Pitching'
+          : createTitle || (isAsanaImport ? '從 Asana 新增項目' : '新增提案 New Pitching')
+      }
+      size="xl"
+    >
+      <div className="space-y-6 pb-2">
+        <section className="space-y-3">
+          <h3 className="text-[14px] font-semibold flex items-center gap-2">
+            <User size={15} className="text-teal-600" />
+            客戶 Customer
+          </h3>
+          <div>
+            <label className="text-[12px] font-medium text-muted-foreground block mb-1">
+              客戶 Customer{isEdit ? '' : ' *'}
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <SearchableSelect
+                  value={form.clientId}
+                  onValueChange={handleClientChange}
+                  options={clientOptions}
+                  placeholder="搜尋客戶..."
+                  searchPlaceholder="搜尋客戶名稱..."
+                  emptyText="找不到客戶"
+                />
+              </div>
+              {onCreateClient && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowQuickAddClient(true)}
+                  className="h-9 shrink-0 gap-1.5 text-[13px] border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100"
+                >
+                  <Plus size={14} /> 新增客戶
+                </Button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 border-t border-border pt-5">
+          <h3 className="text-[14px] font-semibold flex items-center gap-2">
+            <FileText size={15} className="text-teal-600" />
+            提案詳細 Pitching Details
+          </h3>
+
+          <div>
+            <label className="text-[12px] font-medium text-muted-foreground block mb-1">顯示名稱 Display Name *</label>
+            <Input
+              value={form.displayName}
+              onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
+              placeholder="客戶顯示名稱（可自行修改）"
+              className="h-9 text-[13px]"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              系統會使用此名稱作為主要顯示，選擇客戶時會自動填入，可手動覆蓋
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="text-[12px] font-medium text-muted-foreground block mb-1">查詢日期 Enquiry Date *</label>
+              <Input
+                type="date"
+                value={form.inquiryDate}
+                min={`${currentYear}-01-01`}
+                max={`${currentYear + 1}-12-31`}
+                onChange={(e) => setForm((prev) => ({ ...prev, inquiryDate: e.target.value }))}
+                className="h-9 text-[13px] w-full"
+              />
+              {form.inquiryDate && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  已選：{formatEnquiryDateLabel(form.inquiryDate)}
+                  {isEdit ? '' : '（預設為新增當日）'}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="text-[12px] font-medium text-muted-foreground block mb-1">簽約日期 Signed Date</label>
+              <Input
+                type="date"
+                value={form.signedDate}
+                min={`${currentYear - 2}-01-01`}
+                max={`${currentYear + 2}-12-31`}
+                onChange={(e) => setForm((prev) => ({ ...prev, signedDate: e.target.value }))}
+                className="h-9 text-[13px] w-full"
+              />
+              {form.signedDate && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  已選：{formatEnquiryDateLabel(form.signedDate)}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="text-[12px] font-medium text-muted-foreground block mb-1">交付日期 Handover Date</label>
+              <Input
+                type="date"
+                value={form.handoverDate}
+                min={`${currentYear - 2}-01-01`}
+                max={`${currentYear + 2}-12-31`}
+                onChange={(e) => setForm((prev) => ({ ...prev, handoverDate: e.target.value }))}
+                className="h-9 text-[13px] w-full"
+              />
+              {form.handoverDate && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  已選：{formatEnquiryDateLabel(form.handoverDate)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[12px] font-medium text-muted-foreground block mb-1.5">專案類型 Project Type *</label>
+            <ProjectTypeMultiSelect
+              value={form.projectTypes}
+              onChange={(projectTypes) => setForm((prev) => ({ ...prev, projectTypes }))}
+            />
+          </div>
+
+          {!hideWebsiteField && projectTypesNeedWebsiteLink(form.projectTypes) && (
+            <ClientWebsiteSelectField
+              value={form.webandsystemListId}
+              onChange={(webandsystemListId) => setForm((prev) => ({ ...prev, webandsystemListId }))}
+              clientId={form.clientId}
+              companyNameZh={companyNamesForClient(form.clientId, clientOptions).companyNameZh}
+              companyNameEn={companyNamesForClient(form.clientId, clientOptions).companyNameEn}
+              clientName={form.clientName}
+              displayName={form.displayName}
+              projectTypes={form.projectTypes}
+            />
+          )}
+
+          <div>
+            <label className="text-[12px] font-medium text-muted-foreground block mb-1">負責 PM *</label>
+            <SearchableSelect
+              value={form.mainPmId}
+              onValueChange={(mainPmId) => setForm((prev) => ({ ...prev, mainPmId }))}
+              options={staffOptions}
+              placeholder="選擇負責 PM..."
+              searchPlaceholder="搜尋同事名稱或電郵..."
+              emptyText="找不到同事"
+            />
+          </div>
+
+          <div>
+            <label className="text-[12px] font-medium text-muted-foreground block mb-1">提案描述 Description</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="提案描述..."
+              rows={6}
+              className="w-full text-[13px] border border-border rounded-md px-3 py-2.5 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none overflow-y-auto leading-[1.5]"
+              style={{ height: '9.75rem', minHeight: '9.75rem', maxHeight: '9.75rem' }}
+            />
+          </div>
+        </section>
+
+        <section className="space-y-3 border-t border-border pt-5">
+          <h3 className="text-[14px] font-semibold flex items-center gap-2">
+            <Link2 size={15} className="text-teal-600" />
+            連結 Links
+          </h3>
+          <div>
+            <label className="text-[12px] font-medium text-muted-foreground block mb-1">Asana 連結</label>
+            <Input
+              type="url"
+              value={form.asanaLink}
+              onChange={(e) => setForm((prev) => ({ ...prev, asanaLink: e.target.value }))}
+              placeholder="https://app.asana.com/..."
+              className="h-9 text-[13px]"
+            />
+          </div>
+        </section>
+
+        <div className="flex justify-end gap-3 pt-2 border-t border-border">
+          <Button variant="secondary" onClick={handleClose} className="gap-1.5" disabled={submitting}>
+            <X size={14} /> 取消
+          </Button>
+          <Button
+            className="bg-teal-600 hover:bg-teal-700 text-white gap-1.5"
+            onClick={() => void handleSubmit()}
+            disabled={submitting}
+          >
+            <Save size={14} /> {submitting ? '儲存中…' : isEdit ? '儲存' : '建立'}
+          </Button>
+        </div>
+      </div>
+    </CrudModal>
+    {onCreateClient && (
+      <ClientFormModal
+        open={showQuickAddClient}
+        onClose={() => setShowQuickAddClient(false)}
+        onSave={handleQuickAddClient}
+        saving={savingClient}
+        overlayClassName="z-[120]"
+      />
+    )}
+    </>
+  );
+}
+
+function PitchingList({
+  records,
+  onView,
+  onEdit,
+}: {
+  records: PitchingRecord[];
+  onView: (record: PitchingRecord) => void;
+  onEdit: (record: PitchingRecord) => void;
+}) {
+  const { typeOptions } = useQuotationSection();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [projectTypeFilter, setProjectTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const withMoney = useMemo(
+    () => records.map((record) => ({ ...record, ...estimatedMoneyFor(record) })),
+    [records],
+  );
+
+  const filtered = useMemo(() => {
+    return withMoney.filter((p) => {
+      if (!matchesProjectTypeFilter(p.projectTypes, projectTypeFilter)) return false;
+      if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          p.pitchingId.toLowerCase().includes(query) ||
+          p.clientName.toLowerCase().includes(query) ||
+          p.displayName.toLowerCase().includes(query) ||
+          formatProjectTypes(p.projectTypes).toLowerCase().includes(query) ||
+          formatMainPmName(p).toLowerCase().includes(query) ||
+          p.assignedPmName.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [withMoney, searchQuery, projectTypeFilter, statusFilter]);
+  const { sorted, sortKey, sortDir, onSort } = useQuotationListSort(filtered);
+
+  const totalCount = records.length;
+  const activeCount = records.filter((p) => p.status === 'initial' || p.status === 'following_up' || p.status === 'confirmed').length;
+  const closedCount = records.filter((p) => p.status === 'closed').length;
+  const conversionRate = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white rounded-md border border-[rgba(13,26,45,0.08)] shadow-card p-5">
+          <span className="text-[13px] font-medium text-muted-foreground">Pitching 總數</span>
+          <span className="text-[22px] font-bold block mt-1">{totalCount}</span>
+        </div>
+        <div className="bg-white rounded-md border border-[rgba(13,26,45,0.08)] shadow-card p-5">
+          <span className="text-[13px] font-medium text-muted-foreground">進行中</span>
+          <span className="text-[22px] font-bold block mt-1 text-amber-600">{activeCount}</span>
+        </div>
+        <div className="bg-white rounded-md border border-[rgba(13,26,45,0.08)] shadow-card p-5">
+          <span className="text-[13px] font-medium text-muted-foreground">已結案</span>
+          <span className="text-[22px] font-bold block mt-1 text-emerald-600">{closedCount}</span>
+        </div>
+        <div className="bg-white rounded-md border border-[rgba(13,26,45,0.08)] shadow-card p-5">
+          <span className="text-[13px] font-medium text-muted-foreground">結案率</span>
+          <span className="text-[22px] font-bold block mt-1 text-teal-600">{conversionRate}%</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+          <input
+            type="text"
+            placeholder="搜尋客戶、顯示名稱、項目類型..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-[13px] border border-border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+          />
+        </div>
+        <select
+          value={projectTypeFilter}
+          onChange={(e) => setProjectTypeFilter(e.target.value)}
+          className="text-[13px] border border-border rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+        >
+          <option value="all">全部項目類型</option>
+          {typeOptions.map((opt) => (
+            <option key={opt.id} value={opt.id}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="text-[13px] border border-border rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+        >
+          <option value="all">全部狀態</option>
+          <option value="initial">初步提案</option>
+          <option value="following_up">跟進中</option>
+          <option value="confirmed">確認項目</option>
+          <option value="closed">已結案</option>
+        </select>
+      </div>
+
+      <div className="bg-white rounded-md border border-[rgba(13,26,45,0.08)] shadow-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <QuotationClientProjectTableHeaders
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={onSort}
+                moneyColumns="estimated"
+              />
+            </thead>
+            <tbody>
+              {sorted.map((record) => (
+                  <tr
+                    key={record.id}
+                    onClick={() => onView(record)}
+                    className="border-b border-border/50 hover:bg-muted/20 transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3 text-[13px] text-muted-foreground tabular-nums">{record.inquiryDate}</td>
+                    <td className="px-4 py-3 text-[13px]">
+                      <RemainingDaysCell
+                        inquiryDate={record.inquiryDate}
+                        status={record.status}
+                        signedDate={record.signedDate}
+                        handoverDate={record.handoverDate}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-[13px] max-w-[180px]">{formatProjectTypes(record.projectTypes)}</td>
+                    <ProjectDisplayNameCell record={record} />
+                    <td className="px-4 py-3 text-[13px]">{formatRelatedClientName(record)}</td>
+                    <td className="px-4 py-3 text-[13px]">{formatMainPmName(record)}</td>
+                    <QuotationListMoneyCells
+                      income={record.income}
+                      expense={record.expense}
+                      gp={record.gp}
+                    />
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <PitchingStatusBadge status={record.status} />
+                    </td>
+                    <ProjectListActionCell record={record} onEdit={onEdit} />
+                  </tr>
+                ))}
+              {sorted.length === 0 && (
+                <tr>
+                  <td colSpan={QUOTATION_LIST_COLUMN_COUNT} className="px-4 py-8 text-center text-[13px] text-muted-foreground">
+                    沒有找到符合條件的 Pitching 紀錄
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type DetailDraft = {
+  clientId: string;
+  clientName: string;
+  displayName: string;
+  inquiryDate: string;
+  signedDate: string;
+  handoverDate: string;
+  description: string;
+  projectTypes: PitchingProjectType[];
+  webandsystemListId: string;
+  asanaLink: string;
+  status: PitchingStatus;
+  estimatedIncome: number | undefined;
+  estimatedExpenses: PitchingExpenseItem[];
+};
+
+function draftFromRecord(record: PitchingRecord, clientOptions: ClientOption[]): DetailDraft {
+  const { clientId, clientName } = resolvePitchingFormClient(record, clientOptions);
+  return {
+    clientId,
+    clientName,
+    displayName: record.displayName,
+    inquiryDate: record.inquiryDate,
+    signedDate: optionalIsoDate(record.signedDate) ?? '',
+    handoverDate: optionalIsoDate(record.handoverDate) ?? '',
+    description: record.description ?? '',
+    projectTypes: record.projectTypes,
+    webandsystemListId: record.webandsystemListId ?? '',
+    asanaLink: record.asanaLink ?? '',
+    status: record.status,
+    estimatedIncome: record.estimatedIncome,
+    estimatedExpenses: record.estimatedExpenses ?? [],
+  };
+}
+
+function ReadOnlyField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <span className="text-[12px] text-muted-foreground block">{label}</span>
+      <div className="text-[14px] font-medium mt-0.5 min-w-0 max-w-full break-all whitespace-normal">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function PitchingDetail({
+  record,
+  clientOptions,
+  onBack,
+  onEdit,
+  onSave,
+}: {
+  record: PitchingRecord;
+  clientOptions: ClientOption[];
+  onBack: () => void;
+  onEdit: () => void;
+  onSave: (id: string, data: QuotationClientProjectUpdate) => Promise<{ error: { message: string } | null }>;
+}) {
+  const [activeTab, setActiveTab] = useState<'info' | 'followups' | 'hours' | 'docs' | 'income' | 'budget' | 'expense' | 'cost'>('info');
+  const [draft, setDraft] = useState<DetailDraft>(() => draftFromRecord(record, clientOptions));
+  const [saving, setSaving] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<PitchingStatus | null>(null);
+  const [docEditor, setDocEditor] = useState(() => readInvoiceReceiptDoc());
+  const clientCompany = companyNamesForClient(draft.clientId, clientOptions);
+  const clientPage = quotationProjectSubModule(record.status);
+
+  useEffect(() => {
+    const sync = () => setDocEditor(readInvoiceReceiptDoc());
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, [record.id]);
+
+  useEffect(() => {
+    setDraft(draftFromRecord(record, clientOptions));
+    // Reset when the viewed row changes — not when the client list refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [record.id, record.updatedAt]);
+
+  const remaining = calcRemainingDays(draft.inquiryDate, draft.status);
+
+  const persist = async (data: QuotationClientProjectUpdate, successMessage?: string) => {
+    setSaving(true);
+    const { error } = await onSave(record.id, data);
+    setSaving(false);
+    if (error) {
+      toast.error(`儲存失敗：${error.message}`);
+      return false;
+    }
+    if (successMessage) toast.success(successMessage);
+    return true;
+  };
+
+  const handleWebsiteChange = async (webandsystemListId: string) => {
+    if (webandsystemListId === (record.webandsystemListId ?? '')) return;
+    setDraft((prev) => ({ ...prev, webandsystemListId }));
+    const ok = await persist(
+      { webandsystemListId: webandsystemListId.trim() },
+      '網站 / 系統已更新',
+    );
+    if (!ok) {
+      setDraft((prev) => ({ ...prev, webandsystemListId: record.webandsystemListId ?? '' }));
+    }
+  };
+
+  const applyStatusChange = async (status: PitchingStatus, extra?: QuotationClientProjectUpdate) => {
+    const ok = await persist({ ...extra, status });
+    if (!ok) return false;
+    const nextDates = extra
+      ? {
+          signedDate: extra.signedDate ?? draft.signedDate,
+          handoverDate: extra.handoverDate ?? draft.handoverDate,
+        }
+      : {
+          signedDate: draft.signedDate,
+          handoverDate: draft.handoverDate,
+        };
+    setDraft((prev) => ({
+      ...prev,
+      status,
+      ...nextDates,
+      estimatedIncome: extra?.estimatedIncome ?? prev.estimatedIncome,
+      estimatedExpenses: extra?.estimatedExpenses ?? prev.estimatedExpenses,
+    }));
+    if (quotationProjectSubModule(status) !== quotationProjectSubModule(record.status)) {
+      openQuotationProjectDetail(record.id, status);
+    }
+    return true;
+  };
+
+  const handleStatusChange = async (status: PitchingStatus) => {
+    if (status === record.status) return;
+    if (!isAllowedStatusTransition(record.status, status)) {
+      toast.error('不允許此狀態轉換');
+      return;
+    }
+    if (needsConversionPopup(record.status, status)) {
+      setPendingStatus(status);
+      return;
+    }
+    await applyStatusChange(status);
+  };
+
+  const handleBudgetPersist = async (patch: {
+    estimatedIncome?: number;
+    estimatedExpenses?: PitchingExpenseItem[];
+  }) => persist(patch, '預計收入支出已更新');
+
+  const closeDocEditor = () => {
+    closeInvoiceReceiptEditor(record.id, clientPage);
+    setDocEditor(null);
+    setActiveTab('income');
+  };
+
+  const openDocEditor = (kind: InvoiceReceiptDocKind, incomeId: string) => {
+    setActiveTab('income');
+    setDocEditor({ kind, incomeId });
+    openInvoiceReceiptEditor(record.id, clientPage, kind, incomeId);
+  };
+
+  if (docEditor) {
+    return docEditor.kind === 'receipt' ? (
+      <ReceiptEditor incomeId={docEditor.incomeId} onBack={closeDocEditor} />
+    ) : (
+      <InvoiceEditor incomeId={docEditor.incomeId} onBack={closeDocEditor} />
+    );
+  }
+
+  const tabs = [
+    { id: 'info', label: '基本資訊', icon: FileText },
+    { id: 'followups', label: '跟進記錄', icon: MessageSquare },
+    { id: 'hours', label: '工作時數', icon: Clock },
+    { id: 'docs', label: '項目文件', icon: FolderOpen },
+    { id: 'budget', label: '預計收入支出', icon: DollarSign },
+    { id: 'income', label: '收入', icon: Wallet },
+    { id: 'expense', label: '支出', icon: Banknote },
+    { id: 'cost', label: '成本分析', icon: PieChart },
+  ] as const;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <ArrowLeft size={18} className="text-muted-foreground" />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[20px] font-bold">{draft.displayName || record.displayName}</h2>
+              <span
+                className={cn(
+                  'text-[12px] font-medium px-2.5 py-1 rounded-sm',
+                  pitchingStatusConfig[draft.status].bgColor,
+                  pitchingStatusConfig[draft.status].color,
+                )}
+              >
+                {pitchingStatusConfig[draft.status].label}
+              </span>
+            </div>
+            <p className="text-[13px] text-muted-foreground mt-0.5">{record.pitchingId} · {draft.clientName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-md text-[13px] font-medium text-foreground hover:bg-muted/50 transition-colors active:scale-[0.97]"
+          >
+            <Pencil size={14} /> 編輯
+          </button>
+          {/* Status change stays on the detail page for development; will become admin-only later. */}
+          <PitchingStatusSelect
+            value={draft.status}
+            allowedTargets={allowedStatusTargets(record.status)}
+            onChange={(status) => void handleStatusChange(status)}
+            className="text-[13px] px-3 py-1.5"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-1 border-b border-border">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors',
+              activeTab === tab.id ? 'border-teal-600 text-teal-600' : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <tab.icon size={14} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'info' && (
+        <div className="space-y-6">
+          <PitchingInfoMetricsRow
+            projectId={record.id}
+            status={draft.status}
+            estimatedIncome={record.estimatedIncome}
+            estimatedExpenses={record.estimatedExpenses}
+          />
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
+            <div className="bg-white rounded-md border border-[rgba(13,26,45,0.08)] shadow-card p-6 space-y-5 min-w-0 overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+                <div className="space-y-4 min-w-0">
+                  <ReadOnlyField label="客戶 Customer">
+                    {draft.clientName || '—'}
+                  </ReadOnlyField>
+                  <ReadOnlyField label="提案顯示名稱">
+                    {draft.displayName.trim() || '—'}
+                  </ReadOnlyField>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <ReadOnlyField label="公司名稱 (中文)">
+                      {clientCompany.companyNameZh || '—'}
+                    </ReadOnlyField>
+                    <ReadOnlyField label="公司名稱 (Eng)">
+                      {clientCompany.companyNameEn || '—'}
+                    </ReadOnlyField>
+                  </div>
+                  <ReadOnlyField label="查詢日期">{draft.inquiryDate || '—'}</ReadOnlyField>
+                  <ReadOnlyField label="簽約日期">{draft.signedDate || '—'}</ReadOnlyField>
+                  <ReadOnlyField label="交付日期">{draft.handoverDate || '—'}</ReadOnlyField>
+                  <ReadOnlyField label="剩餘天數">
+                    {remaining === null ? '—' : remaining <= 0 ? `逾期 ${Math.abs(remaining)} 天` : `${remaining} 天`}
+                  </ReadOnlyField>
+                </div>
+                <div className="space-y-4 min-w-0">
+                  <ReadOnlyField label="項目類型">
+                    {formatProjectTypes(draft.projectTypes) || '—'}
+                  </ReadOnlyField>
+                  <ReadOnlyField label="負責 PM">{formatMainPmName(record)}</ReadOnlyField>
+                  <div>
+                    <ClientWebsiteSelectField
+                      value={draft.webandsystemListId}
+                      onChange={(webandsystemListId) => void handleWebsiteChange(webandsystemListId)}
+                      clientId={draft.clientId}
+                      companyNameZh={clientCompany.companyNameZh}
+                      companyNameEn={clientCompany.companyNameEn}
+                      clientName={draft.clientName}
+                      displayName={draft.displayName}
+                      projectTypes={draft.projectTypes}
+                      showOpenLink
+                      disabled={saving}
+                    />
+                    {saving && activeTab === 'info' && (
+                      <p className="text-[11px] text-muted-foreground mt-1">儲存中…</p>
+                    )}
+                  </div>
+                  <ReadOnlyField label="Asana 連結">
+                    {draft.asanaLink.trim() ? (
+                      /^https?:\/\//i.test(draft.asanaLink) ? (
+                        <a
+                          href={draft.asanaLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-teal-700 hover:text-teal-800"
+                        >
+                          {draft.asanaLink}
+                        </a>
+                      ) : (
+                        draft.asanaLink
+                      )
+                    ) : (
+                      '—'
+                    )}
+                  </ReadOnlyField>
+                </div>
+              </div>
+            </div>
+            <QuotationBvCard relatedType="quotation_client" relatedId={record.id} />
+          </div>
+          <div className="bg-white rounded-md border border-[rgba(13,26,45,0.08)] shadow-card p-6">
+            <span className="text-[12px] text-muted-foreground block mb-1">提案描述</span>
+            <p className="text-[14px] leading-relaxed text-foreground/80 whitespace-pre-wrap">
+              {draft.description.trim() || '—'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'followups' && (
+        <PitchingFollowUpsTab
+          projectId={record.id}
+          asanaLink={draft.asanaLink || record.asanaLink || ''}
+          asanaTaskGid={record.asanaTaskGid}
+        />
+      )}
+
+      {activeTab === 'hours' && (
+        <PitchingWorkHoursTab projectId={record.id} />
+      )}
+
+      {activeTab === 'docs' && (
+        <PitchingDocsTab projectId={record.id} />
+      )}
+
+      {activeTab === 'income' && (
+        <PitchingIncomeTab
+          projectId={record.id}
+          page={clientPage}
+          signedDate={draft.signedDate}
+          handoverDate={draft.handoverDate}
+          onOpenDocument={openDocEditor}
+        />
+      )}
+
+      {activeTab === 'expense' && (
+        <PitchingExpenseTab
+          relatedType="quotation_client"
+          relatedId={record.id}
+          webandsystemListId={draft.webandsystemListId}
+          signedDate={draft.signedDate}
+          handoverDate={draft.handoverDate}
+        />
+      )}
+
+      {activeTab === 'cost' && (
+        <PitchingCostAnalysisTab
+          projectId={record.id}
+          estimatedIncome={record.estimatedIncome}
+          estimatedExpenses={record.estimatedExpenses ?? []}
+        />
+      )}
+
+      {activeTab === 'budget' && (
+        <PitchingBudgetTab
+          income={record.estimatedIncome}
+          expenses={record.estimatedExpenses ?? []}
+          saving={saving}
+          onPersist={handleBudgetPersist}
+        />
+      )}
+
+      {pendingStatus && (
+        <PitchingStatusConversionModal
+          record={record}
+          target={pendingStatus}
+          saving={saving}
+          onClose={() => setPendingStatus(null)}
+          onConfirm={(patch) => applyStatusChange(pendingStatus, patch)}
+        />
+      )}
+    </div>
+  );
+}
+
+export function PitchingModule() {
+  const { systemUser } = useAuth();
+  const { allowedTypes } = useQuotationSection();
+  const { records, loading, error, lastSyncedAt, refresh, addRecord, updateRecord } = useQuotationClientProjects();
+  const { records: clientListRecords, addClient } = useQuotationClientList();
+  const { detailId, openDetail, closeDetail } = useQuotationClientDetailId('pitching');
+  const selectedRecord = useMemo(
+    () => (detailId ? records.find((r) => r.id === detailId) ?? null : null),
+    [detailId, records],
+  );
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<PitchingRecord | null>(null);
+  const { options: staffOptions } = useActiveStaffOptions([
+    editingRecord?.mainPmId,
+    selectedRecord?.mainPmId,
+  ]);
+
+  const pitchingClientOptions = useMemo(
+    () => clientListRecords.map(toQuotationClientSelectOption),
+    [clientListRecords],
+  );
+
+  const scopedRecords = useMemo(
+    () => filterBySectionProjectTypes(records, allowedTypes),
+    [records, allowedTypes],
+  );
+
+  useEffect(() => {
+    if (!selectedRecord) return;
+    if (readQuotationClientPage() === quotationProjectSubModule(selectedRecord.status)) return;
+    openQuotationProjectDetail(selectedRecord.id, selectedRecord.status);
+  }, [selectedRecord]);
+
+  const handleView = (record: PitchingRecord) => {
+    openQuotationProjectDetail(record.id, record.status);
+    if (record.status !== 'confirmed') openDetail(record.id);
+  };
+
+  const openCreateModal = () => {
+    setEditingRecord(null);
+    setFormModalOpen(true);
+  };
+
+  const openEditModal = (record: PitchingRecord) => {
+    setEditingRecord(record);
+    setFormModalOpen(true);
+  };
+
+  const closeFormModal = () => {
+    setFormModalOpen(false);
+    setEditingRecord(null);
+  };
+
+  const handleFormSubmit = async (form: PitchingFormValues) => {
+    const selectedStaff = staffOptions.find((s) => s.value === form.mainPmId);
+    const payload = {
+      ...pitchingFormToUpdate(form),
+      projectTypes: mergeScopedProjectTypes(editingRecord?.projectTypes, form.projectTypes, allowedTypes),
+      assignedPmName: selectedStaff?.label || '',
+      mainPmName: selectedStaff?.label || undefined,
+    };
+    if (editingRecord) {
+      const { error: saveErr } = await updateRecord(editingRecord.id, payload);
+      if (saveErr) {
+        toast.error(`儲存失敗：${saveErr.message}`);
+        return;
+      }
+      closeFormModal();
+      toast.success('Pitching 已更新');
+      return;
+    }
+
+    const { error: addErr } = await addRecord({
+      clientId: form.clientId.trim(),
+      clientName: form.clientName.trim(),
+      displayName: form.displayName.trim(),
+      inquiryDate: form.inquiryDate,
+      signedDate: form.signedDate || undefined,
+      handoverDate: form.handoverDate || undefined,
+      description: form.description.trim() || undefined,
+      projectTypes: mergeScopedProjectTypes([], form.projectTypes, allowedTypes),
+      assignedPm: '',
+      assignedPmName: selectedStaff?.label || '',
+      mainPmId: form.mainPmId.trim() || undefined,
+      mainPmName: selectedStaff?.label || undefined,
+      status: 'initial',
+      webandsystemListId: form.webandsystemListId.trim() || undefined,
+      asanaLink: form.asanaLink.trim() || undefined,
+    });
+    if (addErr) {
+      toast.error(`新增失敗：${addErr.message}`);
+      return;
+    }
+    closeFormModal();
+    toast.success('Pitching 已成功新增');
+  };
+
+  const handleSaveRecord = async (id: string, data: QuotationClientProjectUpdate) => {
+    const result = await updateRecord(id, data);
+    if (!result.error) {
+      await refresh();
+    }
+    return result;
+  };
+
+  const formModal = (
+    <PitchingFormModal
+      isOpen={formModalOpen}
+      onClose={closeFormModal}
+      onSubmit={handleFormSubmit}
+      clientOptions={pitchingClientOptions}
+      staffOptions={staffOptions}
+      defaultMainPmId={systemUser?.staff_id}
+      initialRecord={editingRecord}
+      onCreateClient={addClient}
+    />
+  );
+
+  if (detailId) {
+    if (loading && !selectedRecord) {
+      return <div className="text-center py-12 text-[13px] text-muted-foreground">載入 Pitching 資料中…</div>;
+    }
+    if (!selectedRecord) {
+      return (
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={closeDetail}
+            className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft size={14} /> 返回 Pitching 列表
+          </button>
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+            找不到此 Pitching 紀錄（id: {detailId}）
+          </div>
+        </div>
+      );
+    }
+    return (
+      <>
+        <PitchingDetail
+          record={selectedRecord}
+          clientOptions={pitchingClientOptions}
+          onBack={closeDetail}
+          onEdit={() => openEditModal(selectedRecord)}
+          onSave={handleSaveRecord}
+        />
+        {formModal}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[24px] font-bold tracking-tight">Pitching</h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">
+            記錄所有客戶初步查詢及提案，追蹤從查詢到報價的完整歷程。
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 text-white rounded-md text-[13px] font-medium hover:bg-teal-700 transition-colors duration-200 active:scale-[0.97]"
+          >
+            <Plus size={14} /> 新增 Pitching
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-800">
+          無法載入 Pitching 資料：{error}（請確認已執行 Supabase migration）
+        </div>
+      )}
+      {lastSyncedAt && !error && (
+        <p className="text-[12px] text-muted-foreground">最後更新：{lastSyncedAt.slice(0, 19).replace('T', ' ')}</p>
+      )}
+
+      {loading ? (
+        <div className="text-center py-12 text-[13px] text-muted-foreground">載入 Pitching 資料中…</div>
+      ) : (
+        <PitchingList
+          records={scopedRecords}
+          onView={handleView}
+          onEdit={openEditModal}
+        />
+      )}
+
+      {formModal}
+    </div>
+  );
+}
