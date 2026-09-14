@@ -18,29 +18,32 @@ npm install
 npm run dev
 ```
 
-## New isolated database (never the live project)
+## Isolated database (already created)
 
-1. Create an empty Supabase project in the dashboard (do not clone production).
-2. From this folder only:
+Demo Supabase project: [qdvdnghfnlrqhpypfvub](https://supabase.com/dashboard/project/qdvdnghfnlrqhpypfvub)
+
+Schema + seed are already applied. Login user: `demo@example.com` / `5551234`.
+
+If you clone this repo later:
 
 ```bash
-npx supabase link --project-ref YOUR_DEMO_PROJECT_REF
-npx supabase db push
-npx supabase db query --linked -f supabase/seed.sql
+npx supabase link --project-ref qdvdnghfnlrqhpypfvub
 ```
 
-If `db query` is unavailable, paste `supabase/seed.sql` into the demo project's SQL editor.
-
-3. Auth → URL configuration: Site URL = this demo's Vercel (or `http://localhost:5173`). Leave Google provider off.
+Auth → URL configuration: Site URL = the demo Vercel URL (or `http://localhost:5173`). Leave Google provider off. Do not point this project at the live MPS site.
 
 ## New Vercel project
 
-Create a **new** Vercel project from this repo. Set only:
+Import **this** GitHub repo (not the MPS repo):
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+https://github.com/chifung-BWSolution/acme-marketing-os-demo
 
-Use the demo project's keys. Do not reuse production keys or `bwteam-marketing.com`.
+In Vercel → Settings → Environment Variables, set only:
+
+- `VITE_SUPABASE_URL` = `https://qdvdnghfnlrqhpypfvub.supabase.co`
+- `VITE_SUPABASE_ANON_KEY` = the **anon** key from the demo project API settings
+
+Do not reuse production keys or `bwteam-marketing.com`.
 
 ## Showcase modules
 
