@@ -151,11 +151,11 @@ export function CompanyManagement() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[13px]">公司中文名稱 *</Label>
-                  <Input value={formData.companyNameZh} onChange={(e) => setFormData({ ...formData, companyNameZh: e.target.value })} placeholder="志豐企業有限公司" className="text-[13px]" />
+                  <Input value={formData.companyNameZh} onChange={(e) => setFormData({ ...formData, companyNameZh: e.target.value })} placeholder="Acme Corp" className="text-[13px]" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[13px]">公司英文名稱 *</Label>
-                  <Input value={formData.companyNameEn} onChange={(e) => setFormData({ ...formData, companyNameEn: e.target.value })} placeholder="BWDesign Centre Limited" className="text-[13px]" />
+                  <Input value={formData.companyNameEn} onChange={(e) => setFormData({ ...formData, companyNameEn: e.target.value })} placeholder="Acme Corp Limited" className="text-[13px]" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

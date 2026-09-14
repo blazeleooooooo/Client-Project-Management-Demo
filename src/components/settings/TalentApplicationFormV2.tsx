@@ -587,7 +587,7 @@ export function TalentApplicationFormV2({
           <FileText size={20} />
         </div>
         <h2 className="text-[18px] font-bold text-[#0d1a2d]">
-          志豐設計（深圳）有限公司 — Model 面試登記表
+          Acme Design — Model 面試登記表
         </h2>
         <p className="mt-2 text-[12px] text-muted-foreground">
           請按分區完整填寫資料，方便招募、面試、試鏡、工作配對及客戶推薦。

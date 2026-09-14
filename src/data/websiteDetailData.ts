@@ -105,9 +105,9 @@ export const websiteExternalLinks: Record<string, ExternalLink[]> = {
   ws1: [
     { id: 'el1', websiteProfileId: 'ws1', label: 'Figma 設計稿', url: 'https://figma.com/file/bw-design', linkType: 'figma' },
     { id: 'el2', websiteProfileId: 'ws1', label: 'GitHub Repo', url: 'https://github.com/bw-design', linkType: 'github' },
-    { id: 'el3', websiteProfileId: 'ws1', label: 'Staging 環境', url: 'https://staging.bwdesign.com.hk', linkType: 'staging' },
+    { id: 'el3', websiteProfileId: 'ws1', label: 'Staging 環境', url: 'https://staging.acme.com.hk', linkType: 'staging' },
     { id: 'el4', websiteProfileId: 'ws1', label: 'GA4 Dashboard', url: 'https://analytics.google.com/bw', linkType: 'analytics' },
-    { id: 'el5', websiteProfileId: 'ws1', label: 'WordPress Admin', url: 'https://www.bwdesign.com.hk/wp-admin', linkType: 'cms' },
+    { id: 'el5', websiteProfileId: 'ws1', label: 'WordPress Admin', url: 'https://www.acme.com.hk/wp-admin', linkType: 'cms' },
   ],
   ws2: [
     { id: 'el6', websiteProfileId: 'ws2', label: 'Staging', url: 'https://staging.aciglobal.com', linkType: 'staging' },

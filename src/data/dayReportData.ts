@@ -98,8 +98,8 @@ export const dailyReports: (DailyReport & { __sampleData: true })[] = [
     submittedAt: '2025-01-20T18:30:00',
     reviewedAt: '2025-01-21T09:00:00',
     entries: [
-      { id: 'we1', dailyReportId: 'dr1', module: 'website', relatedId: 'ws1', relatedName: 'BW Design Centre', title: '首頁改版設計', description: '完成首頁 Hero Section 重新設計，包含動態輪播與 CTA 按鈕優化', hours: 3.5, outcomeType: 'url', outcomeValue: 'https://staging.bwdesign.com.hk/homepage-v2', createdAt: '2025-01-20T10:00:00' },
-      { id: 'we2', dailyReportId: 'dr1', module: 'marketing', relatedId: 'ws1', relatedName: 'BW Design Centre', title: 'SEO 文章撰寫', description: '完成「2025年網頁設計趨勢」文章 2000字，優化關鍵字密度', hours: 2.5, outcomeType: 'url', outcomeValue: 'https://bwdesign.com.hk/blog/web-design-trends-2025', createdAt: '2025-01-20T14:00:00' },
+      { id: 'we1', dailyReportId: 'dr1', module: 'website', relatedId: 'ws1', relatedName: 'BW Design Centre', title: '首頁改版設計', description: '完成首頁 Hero Section 重新設計，包含動態輪播與 CTA 按鈕優化', hours: 3.5, outcomeType: 'url', outcomeValue: 'https://staging.acme.com.hk/homepage-v2', createdAt: '2025-01-20T10:00:00' },
+      { id: 'we2', dailyReportId: 'dr1', module: 'marketing', relatedId: 'ws1', relatedName: 'BW Design Centre', title: 'SEO 文章撰寫', description: '完成「2025年網頁設計趨勢」文章 2000字，優化關鍵字密度', hours: 2.5, outcomeType: 'url', outcomeValue: 'https://acme.com.hk/blog/web-design-trends-2025', createdAt: '2025-01-20T14:00:00' },
       { id: 'we4', dailyReportId: 'dr1', module: 'training', title: 'Figma 進階功能學習', description: '學習 Figma Auto Layout 及 Component Variants 進階使用方法', hours: 1.0, outcomeType: 'growth_experience', outcomeValue: '掌握了 Auto Layout 嵌套技巧，未來可節省 30% 排版時間', createdAt: '2025-01-20T17:30:00' },
     ],
   },
@@ -251,7 +251,7 @@ export const dailyReports: (DailyReport & { __sampleData: true })[] = [
     isHalfDay: true,
     submittedAt: '2025-01-16T13:30:00',
     entries: [
-      { id: 'we28', dailyReportId: 'dr10', module: 'website', relatedId: 'ws1', relatedName: 'BW Design Centre', title: 'BW 關於我們頁面', description: '完成公司介紹頁面內容更新', hours: 2.5, outcomeType: 'url', outcomeValue: 'https://staging.bwdesign.com.hk/about', createdAt: '2025-01-16T09:00:00' },
+      { id: 'we28', dailyReportId: 'dr10', module: 'website', relatedId: 'ws1', relatedName: 'BW Design Centre', title: 'BW 關於我們頁面', description: '完成公司介紹頁面內容更新', hours: 2.5, outcomeType: 'url', outcomeValue: 'https://staging.acme.com.hk/about', createdAt: '2025-01-16T09:00:00' },
       { id: 'we29', dailyReportId: 'dr10', module: 'internal_meeting', title: '半日工作討論', description: '與 PM 確認下週工作安排', hours: 1.0, outcomeType: 'growth_experience', outcomeValue: '確認下週重點是 BSC 網站首頁開發', createdAt: '2025-01-16T11:30:00' },
       { id: 'we30', dailyReportId: 'dr10', module: 'training', title: 'UI 設計趨勢研究', description: '研究 2025 年 UI 設計趨勢報告', hours: 1.0, outcomeType: 'url', outcomeValue: 'https://notion.so/ui-trends-notes-2025', createdAt: '2025-01-16T12:30:00' },
     ],

@@ -330,7 +330,7 @@ export function GscReportModule() {
         </div>
 
         <div className="text-[12px] text-muted-foreground">
-          授權帳號 chifung.login@gmail.com · 報表由 Search Analytics 彙總 · 點擊列可開啟 GSC 詳情
+          授權帳號 demo@example.com · 報表由 Search Analytics 彙總 · 點擊列可開啟 GSC 詳情
           {dataMinDate && dataMaxDate
             ? ` · 已同步資料 ${dataMinDate} ~ ${dataMaxDate}`
             : ' · 尚無查詢指標（請先同步 GSC）'}

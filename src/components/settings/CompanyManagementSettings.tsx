@@ -537,8 +537,8 @@ function CompanyModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FieldInput label="公司編碼" value={form.companyCode || ''} onChange={(v) => updateField('companyCode', v)} error={errors.companyCode} placeholder="如 BWD, ZF" disabled={!!company} />
               <FieldInput label="BR No. (商業登記號碼)" value={form.brNo || ''} onChange={(v) => updateField('brNo', v)} error={errors.brNo} placeholder="12345678-000-01-25-0" />
-              <FieldInput label="中文名稱" value={form.companyNameZh || ''} onChange={(v) => updateField('companyNameZh', v)} error={errors.companyNameZh} placeholder="志豐企業有限公司" />
-              <FieldInput label="英文名稱" value={form.companyNameEn || ''} onChange={(v) => updateField('companyNameEn', v)} error={errors.companyNameEn} placeholder="BWDesign Centre Limited" />
+              <FieldInput label="中文名稱" value={form.companyNameZh || ''} onChange={(v) => updateField('companyNameZh', v)} error={errors.companyNameZh} placeholder="Acme Corp" />
+              <FieldInput label="英文名稱" value={form.companyNameEn || ''} onChange={(v) => updateField('companyNameEn', v)} error={errors.companyNameEn} placeholder="Acme Corp Limited" />
             </div>
           </div>
 

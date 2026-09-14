@@ -37,7 +37,7 @@ const mockDistribution: DistributionRecord[] = [
     id: '1',
     videoTitle: '品牌故事 Ep. 1',
     channel: 'BW 品牌主頻道',
-    company: 'BWDesign',
+    company: 'Acme',
     brand: 'BW Wine',
     platforms: [
       { platform: 'youtube', uploadStatus: 'uploaded', uploadDate: '2024-12-10', videoUrl: 'https://youtube.com', likes: 180 },
@@ -48,7 +48,7 @@ const mockDistribution: DistributionRecord[] = [
     id: '2',
     videoTitle: '新品上架宣傳片',
     channel: '品酒教學系列',
-    company: 'BWDesign',
+    company: 'Acme',
     brand: 'BW Wine',
     platforms: [
       { platform: 'instagram', uploadStatus: 'scheduled', uploadDate: '2024-12-25' },
@@ -59,7 +59,7 @@ const mockDistribution: DistributionRecord[] = [
     id: '3',
     videoTitle: '網頁設計教學',
     channel: 'BW 品牌主頻道',
-    company: 'BWDesign',
+    company: 'Acme',
     brand: 'BW Design',
     platforms: [
       { platform: 'youtube', uploadStatus: 'uploaded', uploadDate: '2024-12-08', videoUrl: 'https://youtube.com', likes: 320 },
@@ -70,7 +70,7 @@ const mockDistribution: DistributionRecord[] = [
     id: '4',
     videoTitle: '活動精華片段',
     channel: 'ACI 活動花絮',
-    company: '志豐企業',
+    company: 'Acme Corp',
     brand: 'ACI',
     platforms: [
       { platform: 'instagram', uploadStatus: 'uploaded', uploadDate: '2024-12-14', videoUrl: 'https://instagram.com', likes: 650 },
@@ -96,7 +96,7 @@ export function VideoDistribution() {
   // New form state
   const [newVideo, setNewVideo] = useState('品牌故事 Ep. 1');
   const [newChannel, setNewChannel] = useState('BW 品牌主頻道');
-  const [newCompany, setNewCompany] = useState('BWDesign');
+  const [newCompany, setNewCompany] = useState('Acme');
   const [newBrand, setNewBrand] = useState('BW Wine');
   const [newPlatformEntries, setNewPlatformEntries] = useState<PlatformEntry[]>([{ ...EMPTY_PLATFORM_ENTRY }]);
 

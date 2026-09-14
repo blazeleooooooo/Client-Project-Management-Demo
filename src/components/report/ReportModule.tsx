@@ -335,8 +335,8 @@ function YearPlanReport() {
   const [filterCompany, setFilterCompany] = useState('all');
 
   const yearPlanData = [
-    { company: 'BWDesign Centre', brand: 'BW', targetRevenue: 2000000, actualRevenue: 1450000, targetProjects: 20, actualProjects: 14, targetArticles: 120, actualArticles: 82, targetVideos: 48, actualVideos: 32, targetSocialPosts: 360, actualSocialPosts: 248 },
-    { company: 'BWDesign Centre', brand: 'ChiFung', targetRevenue: 800000, actualRevenue: 620000, targetProjects: 8, actualProjects: 6, targetArticles: 60, actualArticles: 45, targetVideos: 24, actualVideos: 18, targetSocialPosts: 180, actualSocialPosts: 135 },
+    { company: 'Acme Corp', brand: 'BW', targetRevenue: 2000000, actualRevenue: 1450000, targetProjects: 20, actualProjects: 14, targetArticles: 120, actualArticles: 82, targetVideos: 48, actualVideos: 32, targetSocialPosts: 360, actualSocialPosts: 248 },
+    { company: 'Acme Corp', brand: 'ChiFung', targetRevenue: 800000, actualRevenue: 620000, targetProjects: 8, actualProjects: 6, targetArticles: 60, actualArticles: 45, targetVideos: 24, actualVideos: 18, targetSocialPosts: 180, actualSocialPosts: 135 },
     { company: 'ACI Global', brand: 'ACI', targetRevenue: 1500000, actualRevenue: 980000, targetProjects: 15, actualProjects: 10, targetArticles: 80, actualArticles: 55, targetVideos: 36, actualVideos: 22, targetSocialPosts: 240, actualSocialPosts: 168 },
     { company: 'FCC Media', brand: 'FCC', targetRevenue: 1200000, actualRevenue: 950000, targetProjects: 12, actualProjects: 9, targetArticles: 72, actualArticles: 58, targetVideos: 30, actualVideos: 25, targetSocialPosts: 200, actualSocialPosts: 165 },
     { company: 'BSC Holdings', brand: 'BSC', targetRevenue: 600000, actualRevenue: 380000, targetProjects: 6, actualProjects: 4, targetArticles: 36, actualArticles: 20, targetVideos: 12, actualVideos: 8, targetSocialPosts: 120, actualSocialPosts: 75 },

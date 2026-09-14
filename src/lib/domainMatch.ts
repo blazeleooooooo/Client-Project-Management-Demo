@@ -29,7 +29,7 @@ export interface DomainMatchResult {
 
 /** Excel/legacy domain -> Google Ads account name token (manual overrides). */
 const MANUAL_ACCOUNT_HINTS: Record<string, string> = {
-  'brandingworks-fashion.com': 'brandingworks-fasions.com',
+  'example-fashion.com': 'example-fasions.com',
   'victoria-beauty.com': 'Attitude-Beauty.com',
   'attitude-beauty.com': 'Attitude-Beauty.com',
 };
@@ -37,7 +37,7 @@ const MANUAL_ACCOUNT_HINTS: Record<string, string> = {
 /** Domains without Google Ads account — use manual 所屬網站 label. */
 export const MANUAL_DISPLAY_NAMES: Record<string, string> = {
   'bwmaterial.com': 'BW bwmaterial.com',
-  'brandingworks-hotel.com': 'BW brandingworks-hotel.com',
+  'example-hotel.com': 'BW example-hotel.com',
 };
 
 export function getManualDisplayName(excelDomain: string): string | null {

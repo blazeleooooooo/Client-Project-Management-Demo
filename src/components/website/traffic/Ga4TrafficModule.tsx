@@ -369,7 +369,7 @@ export function Ga4TrafficModule() {
         </div>
 
         <div className="text-[12px] text-muted-foreground">
-          授權帳號 chifung.login@gmail.com · 報表由每日指標彙總 · 點擊列可開啟流量詳情
+          授權帳號 demo@example.com · 報表由每日指標彙總 · 點擊列可開啟流量詳情
           {dataMinDate && dataMaxDate
             ? ` · 已同步資料 ${dataMinDate} ~ ${dataMaxDate}`
             : ' · 尚無每日指標（請用 Google Ads OAuth + Playground 設好 token，見 docs/ga4-setup.md）'}

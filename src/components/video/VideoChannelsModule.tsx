@@ -13,11 +13,11 @@ const importanceConfig: Record<string, { label: string; color: string; bg: strin
 };
 
 const mockChannels = [
-  { id: 'ch1', channelNumber: 'CH-001', internalName: 'BW 品牌主頻道', publicName: 'BW Wine Official', importance: 'A1', status: 'active', company: '志豐企業', brand: 'BW Wine' },
-  { id: 'ch2', channelNumber: 'CH-002', internalName: 'ACI 活動花絮', publicName: 'ACI Events', importance: 'A2', status: 'active', company: '志豐企業', brand: 'ACI' },
-  { id: 'ch3', channelNumber: 'CH-003', internalName: '品酒教學系列', publicName: 'Wine Education', importance: 'A2', status: 'active', company: '志豐企業', brand: 'BW Wine' },
+  { id: 'ch1', channelNumber: 'CH-001', internalName: 'BW 品牌主頻道', publicName: 'BW Wine Official', importance: 'A1', status: 'active', company: 'Acme Corp', brand: 'BW Wine' },
+  { id: 'ch2', channelNumber: 'CH-002', internalName: 'ACI 活動花絮', publicName: 'ACI Events', importance: 'A2', status: 'active', company: 'Acme Corp', brand: 'ACI' },
+  { id: 'ch3', channelNumber: 'CH-003', internalName: '品酒教學系列', publicName: 'Wine Education', importance: 'A2', status: 'active', company: 'Acme Corp', brand: 'BW Wine' },
   { id: 'ch4', channelNumber: 'CH-004', internalName: 'FCC 短視頻', publicName: 'FCC Shorts', importance: 'A3', status: 'active', company: 'FCC', brand: 'FCC' },
-  { id: 'ch5', channelNumber: 'CH-005', internalName: 'BWDesign 作品集', publicName: 'BWDesign Portfolio', importance: 'A3', status: 'paused', company: '志豐企業', brand: 'BWDesign' },
+  { id: 'ch5', channelNumber: 'CH-005', internalName: 'Acme 作品集', publicName: 'Acme Portfolio', importance: 'A3', status: 'paused', company: 'Acme Corp', brand: 'Acme' },
 ];
 
 function ChannelDetail({ channel, onBack }: { channel: any; onBack: () => void }) {
