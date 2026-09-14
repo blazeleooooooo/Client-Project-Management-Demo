@@ -295,7 +295,7 @@ CREATE TABLE IF NOT EXISTS "company_list" (
   "is_active" boolean DEFAULT true NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-  "uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+  "uuid" uuid DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   "chop_url" text,
   "bank_notes" text,
   CONSTRAINT "company_list_pkey" PRIMARY KEY (id)
@@ -430,7 +430,7 @@ CREATE TABLE IF NOT EXISTS "expenses" (
   "payment_method" text,
   "payment_status" text,
   "bad_debt" numeric(14,2) DEFAULT 0 NOT NULL,
-  "outstanding" numeric(14,2) DEFAULT GREATEST(((billed_amount - payment_amount) - bad_debt), (0)::numeric),
+  "outstanding" numeric(14,2) DEFAULT 0,
   "remarks" text,
   "payment_record_file_name" text,
   "payment_record_file_url" text,
@@ -840,7 +840,7 @@ CREATE TABLE IF NOT EXISTS "incomes" (
   "payment_method" text,
   "payment_status" text,
   "bad_debt" numeric(14,2) DEFAULT 0 NOT NULL,
-  "outstanding" numeric(14,2) DEFAULT GREATEST(((billed_amount - payment_amount) - bad_debt), (0)::numeric),
+  "outstanding" numeric(14,2) DEFAULT 0,
   "remarks" text,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -2022,59 +2022,6 @@ CREATE INDEX IF NOT EXISTS webandsystem_list_company_list_id_idx ON public.weban
 CREATE INDEX IF NOT EXISTS webandsystem_list_ga4_property_idx ON public.webandsystem_list USING btree (ga4_property_id);
 CREATE INDEX IF NOT EXISTS webandsystem_list_gads_customer_idx ON public.webandsystem_list USING btree (google_ads_customer_id);
 CREATE INDEX IF NOT EXISTS webandsystem_list_gsc_site_url_idx ON public.webandsystem_list USING btree (gsc_site_url);
-
-CREATE OR REPLACE VIEW "quotation_bv_with_company" AS  SELECT bv.id,
-    bv.project_id,
-    bv.staff_id,
-    s.display_name AS party_name,
-    bv.bv_ratio,
-    'staff'::text AS slice_kind,
-    bv.created_at,
-    bv.updated_at
-   FROM quotation_bv bv
-     LEFT JOIN staffs s ON s.id = bv.staff_id
-UNION ALL
- SELECT NULL::uuid AS id,
-    p.id AS project_id,
-    NULL::uuid AS staff_id,
-    quotation_bv_company_label() AS party_name,
-    quotation_bv_company_ratio() AS bv_ratio,
-    'company'::text AS slice_kind,
-    p.created_at,
-    p.updated_at
-   FROM projects p
-  WHERE (EXISTS ( SELECT 1
-           FROM quotation_bv bv
-          WHERE bv.project_id = p.id));;
-CREATE OR REPLACE VIEW "system_users" AS  SELECT u.id,
-    u.staff_id,
-    u.auth_user_id,
-    u.email,
-    u.email AS google_email,
-    s.display_name,
-    u.role_tag AS role,
-    s.team_name AS department,
-    s."position",
-    COALESCE(s.work_phone, s.private_phone) AS phone,
-    true AS is_active,
-    s.otc_staff_sync_id::text AS bubble_staff_id,
-    u.created_at,
-    u.updated_at
-   FROM users u
-     LEFT JOIN staffs s ON s.id = u.staff_id;;
-CREATE OR REPLACE VIEW "user_info" AS  SELECT u.id,
-    u.staff_id,
-    u.auth_user_id,
-    u.role_tag,
-    u.email,
-    u.email AS google_email,
-    s.display_name,
-    s.base_location AS office,
-    s.team_name AS department,
-    u.created_at,
-    u.updated_at
-   FROM users u
-     LEFT JOIN staffs s ON s.id = u.staff_id;;
 
 CREATE OR REPLACE FUNCTION public.allocate_pitching_code(p_types text[], p_inquiry_date date)
  RETURNS text
@@ -3913,6 +3860,59 @@ BEGIN
 END;
 $function$
 ;
+
+CREATE OR REPLACE VIEW "quotation_bv_with_company" AS  SELECT bv.id,
+    bv.project_id,
+    bv.staff_id,
+    s.display_name AS party_name,
+    bv.bv_ratio,
+    'staff'::text AS slice_kind,
+    bv.created_at,
+    bv.updated_at
+   FROM quotation_bv bv
+     LEFT JOIN staffs s ON s.id = bv.staff_id
+UNION ALL
+ SELECT NULL::uuid AS id,
+    p.id AS project_id,
+    NULL::uuid AS staff_id,
+    quotation_bv_company_label() AS party_name,
+    quotation_bv_company_ratio() AS bv_ratio,
+    'company'::text AS slice_kind,
+    p.created_at,
+    p.updated_at
+   FROM projects p
+  WHERE (EXISTS ( SELECT 1
+           FROM quotation_bv bv
+          WHERE bv.project_id = p.id));;
+CREATE OR REPLACE VIEW "system_users" AS  SELECT u.id,
+    u.staff_id,
+    u.auth_user_id,
+    u.email,
+    u.email AS google_email,
+    s.display_name,
+    u.role_tag AS role,
+    s.team_name AS department,
+    s."position",
+    COALESCE(s.work_phone, s.private_phone) AS phone,
+    true AS is_active,
+    s.otc_staff_sync_id::text AS bubble_staff_id,
+    u.created_at,
+    u.updated_at
+   FROM users u
+     LEFT JOIN staffs s ON s.id = u.staff_id;;
+CREATE OR REPLACE VIEW "user_info" AS  SELECT u.id,
+    u.staff_id,
+    u.auth_user_id,
+    u.role_tag,
+    u.email,
+    u.email AS google_email,
+    s.display_name,
+    s.base_location AS office,
+    s.team_name AS department,
+    u.created_at,
+    u.updated_at
+   FROM users u
+     LEFT JOIN staffs s ON s.id = u.staff_id;;
 
 CREATE TRIGGER set_artist_apply_updated_at BEFORE UPDATE ON artist_apply FOR EACH ROW EXECUTE FUNCTION set_artist_apply_updated_at();
 CREATE TRIGGER trg_sync_website_hours AFTER INSERT OR DELETE OR UPDATE ON day_report_entries FOR EACH ROW EXECUTE FUNCTION sync_website_total_hours();
