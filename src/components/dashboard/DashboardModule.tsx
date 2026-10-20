@@ -22,6 +22,17 @@ function DashboardOverview() {
         </p>
       </div>
 
+      <div className="rounded-md border border-teal-200 bg-white px-4 py-3 shadow-card">
+        <p className="text-[13px] font-semibold text-[#0d1a2d]">Portfolio demo · synthetic data only</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+          You are signed in as the visitor account. Companies and metrics are fictional
+          (Acme, Northwind, Contoso). The workspace labels are Traditional Chinese.
+          Start with <span className="font-medium text-[#0d1a2d]">工作匯報</span>,{' '}
+          <span className="font-medium text-[#0d1a2d]">市場項目管理 → Pitching</span>, or{' '}
+          <span className="font-medium text-[#0d1a2d]">行銷管理 → Google Ads</span>.
+        </p>
+      </div>
+
       {/* KPI Stats */}
       <KPIStatsGrid />
 

@@ -22,7 +22,7 @@ export const websiteProfiles: (WebsiteProfileFull & { __sampleData: true })[] = 
     companyId: 'c1',
     brandId: 'b1',
     websiteName: 'BW Interior Acme設計工程',
-    domainUrl: 'https://www.bwteam.com/',
+    domainUrl: 'https://www.example.com/',
     platform: 'framer',
     hostingProvider: 'Framer',
     company: 'BWD',

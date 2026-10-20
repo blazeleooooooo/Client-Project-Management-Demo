@@ -110,7 +110,7 @@ export function MyProjects() {
 
   const openProject = (projectId: string) => {
     writeSelectedProject(projectId);
-    navigateTo('project', 'detail');
+    navigateTo('day-report', 'analytics');
   };
 
   return (

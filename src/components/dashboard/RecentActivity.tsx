@@ -11,7 +11,7 @@ export function RecentActivity() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[18px] font-bold">近期活動</h3>
         <button
-          onClick={() => navigateTo('report', 'performance')}
+          onClick={() => navigateTo('day-report', 'team-view')}
           className="text-[13px] text-teal-600 font-medium hover:underline"
         >
           查看全部

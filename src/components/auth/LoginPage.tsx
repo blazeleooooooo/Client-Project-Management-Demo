@@ -70,9 +70,19 @@ export function LoginPage({ authError }: { authError?: string | null }) {
 
         <div className="bg-white rounded-lg border border-[rgba(13,26,45,0.08)] shadow-[0_2px_6px_rgba(0,20,40,0.05)] p-8">
           <h2 className="text-[20px] font-bold text-center mb-2">Sign in</h2>
-          <p className="text-[13px] text-muted-foreground text-center mb-6">
-            Use the seeded demo account below
+          <p className="text-[13px] text-muted-foreground text-center mb-4">
+            No signup. The visitor account is filled in below.
           </p>
+
+          <div className="mb-5 rounded-lg border border-teal-200 bg-teal-50 px-3.5 py-3 text-left">
+            <p className="text-[12px] font-semibold uppercase tracking-wide text-teal-800">Visitor demo</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-[#0d1a2d]">
+              Email <span className="font-semibold">demo@example.com</span>
+            </p>
+            <p className="text-[13px] leading-relaxed text-[#0d1a2d]">
+              Phone password <span className="font-semibold">5551234</span>
+            </p>
+          </div>
 
           {displayError && (
             <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-300 rounded-lg mb-4 shadow-sm">
@@ -116,15 +126,10 @@ export function LoginPage({ authError }: { authError?: string | null }) {
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-border/50">
-            <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-              Demo login: <span className="font-medium">demo@example.com</span> / phone <span className="font-medium">5551234</span>
-            </p>
-          </div>
         </div>
 
         <p className="text-[11px] text-muted-foreground text-center mt-6">
-          © {new Date().getFullYear()} Acme Corp. Isolated demo — no production data.
+          © {new Date().getFullYear()} Acme Corp. Portfolio demo — synthetic data only.
         </p>
       </div>
     </div>

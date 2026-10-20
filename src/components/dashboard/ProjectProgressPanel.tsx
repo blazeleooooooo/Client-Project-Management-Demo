@@ -46,7 +46,7 @@ export function ProjectProgressPanel() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[18px] font-bold">即時專案進度</h3>
         <button
-          onClick={() => navigateTo('project', 'progress')}
+          onClick={() => navigateTo('day-report', 'analytics')}
           className="text-[13px] text-teal-600 font-medium hover:underline"
         >
           查看全部
@@ -66,7 +66,7 @@ export function ProjectProgressPanel() {
               <div
                 key={project.id}
                 className="space-y-1.5 cursor-pointer group"
-                onClick={() => navigateTo('project', 'progress')}
+                onClick={() => navigateTo('day-report', 'analytics')}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
