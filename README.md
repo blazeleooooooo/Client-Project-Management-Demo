@@ -1,55 +1,53 @@
-# Acme Marketing OS (isolated demo)
+# Client Project Management Demo
 
-Standalone demo of the marketing project workspace. It is **not** connected to the live MPS site, production Supabase project, or the original GitHub remote.
+A marketing-operations workspace for client work: day reports, pitching and quotations, and ad performance. This is a portfolio demo. Every company, contact, and metric is fictional (Acme, Northwind, Contoso). There is no production data and no live ads, analytics, or Asana connection.
 
-## Demo login
+**Live demo:** https://client-project-management-demo.vercel.app
 
-- Email: `demo@example.com`
-- Phone password: `5551234`
+The product UI is Traditional Chinese. Sign-in and the on-screen visitor hint are in English.
 
-All rows are synthetic (Acme / Northwind / Contoso). There is no Google login and no live ads/Asana/GSC sync.
+## Try it
 
-## Local app
+The app requires a sign-in. You do not need an account of your own.
+
+1. Open the [live demo](https://client-project-management-demo.vercel.app).
+2. Use the visitor account already filled in on the sign-in form:
+   - Email: `demo@example.com`
+   - Phone password: `5551234`
+3. Suggested path after sign-in:
+   - **首頁** — dashboard
+   - **工作匯報** — day reports
+   - **市場項目管理 → Pitching** — Northwind website refresh
+   - **行銷管理 → Google Ads** — seeded ad charts
+
+## Stack
+
+- React 18, TypeScript, Vite, Tailwind CSS
+- Supabase (email/phone auth and Postgres)
+- Recharts
+- Hosted on Vercel
+
+## Run locally
 
 ```bash
 cp .env.example .env.local
-# set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from the *demo* Supabase project
+# Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from the demo Supabase project
 npm install
 npm run dev
 ```
 
-## Isolated database (already created)
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Local dev server |
+| `npm run build` | Typecheck and production build |
+| `npm run preview` | Serve the production build |
 
-Demo Supabase project: [qdvdnghfnlrqhpypfvub](https://supabase.com/dashboard/project/qdvdnghfnlrqhpypfvub)
+## What you can walk through
 
-Schema + seed are already applied. Login user: `demo@example.com` / `5551234`.
+- Home dashboard and my projects
+- Day reports (submit, team view, project analysis)
+- Quotation, pitching, and client projects
+- Google Ads and Facebook Ads charts with seeded metrics
+- Settings for the demo staff profile, companies, and brands
 
-If you clone this repo later:
-
-```bash
-npx supabase link --project-ref qdvdnghfnlrqhpypfvub
-```
-
-Auth → URL configuration: Site URL = the demo Vercel URL (or `http://localhost:5173`). Leave Google provider off. Do not point this project at the live MPS site.
-
-## New Vercel project
-
-Import **this** GitHub repo (not the MPS repo):
-
-https://github.com/chifung-BWSolution/acme-marketing-os-demo
-
-In Vercel → Settings → Environment Variables, set only:
-
-- `VITE_SUPABASE_URL` = `https://qdvdnghfnlrqhpypfvub.supabase.co`
-- `VITE_SUPABASE_ANON_KEY` = the **anon** key from the demo project API settings
-
-Do not reuse production keys or `bwteam-marketing.com`.
-
-## Showcase modules
-
-- Home
-- Day reports
-- Quotation / pitching / projects
-- Ads charts (pre-seeded fake metrics)
-
-Hidden on purpose: Asana, live ads/GA4/GSC sync, AI advisor, email, video, KOL, public forms.
+Live ad sync, Asana, email, video, and public intake forms are turned off in this demo.

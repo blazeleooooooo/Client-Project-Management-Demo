@@ -24,8 +24,8 @@ function AuthGuard({ children }: { children: ReactNode }) {
             <Loader2 size={40} className="text-teal-600 animate-spin absolute inset-0 m-auto" />
           </div>
           <div className="text-center">
-            <p className="text-[14px] font-medium text-[#0d1a2d]">正在驗證身份...</p>
-            <p className="text-[12px] text-muted-foreground mt-1">請稍候，系統正在確認您的帳戶權限</p>
+            <p className="text-[14px] font-medium text-[#0d1a2d]">Checking your session…</p>
+            <p className="text-[12px] text-muted-foreground mt-1">If you are signed out, the visitor demo login is next.</p>
           </div>
         </div>
       </div>

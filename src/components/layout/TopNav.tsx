@@ -1,7 +1,7 @@
 import { useApp, mainMenuItems } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { canAccessSettings } from '@/lib/permissions';
-import { Search, Bell, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import {
@@ -45,7 +45,6 @@ const moduleIcons: Record<string, React.ElementType> = {
 export function TopNav() {
   const { currentModule, navigateTo } = useApp();
   const { systemUser, userInfo, signOut } = useAuth();
-  const [searchFocused, setSearchFocused] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const visibleMenuItems = mainMenuItems.filter(
@@ -60,7 +59,10 @@ export function TopNav() {
           <span className="text-white font-bold text-xs">M</span>
         </div>
         <span className="font-bold text-[14px] tracking-tight whitespace-nowrap hidden md:inline">
-          行銷專案系統
+          Acme Marketing OS
+        </span>
+        <span className="hidden sm:inline-flex items-center rounded bg-teal-500/25 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-100">
+          Demo
         </span>
       </div>
 
@@ -93,29 +95,6 @@ export function TopNav() {
 
       {/* Right Actions */}
       <div className="flex items-center gap-2 px-4 h-full border-l border-white/10 shrink-0">
-        <div
-          className={cn(
-            'flex items-center gap-2 rounded-md border px-2.5 py-1 transition-all duration-200',
-            searchFocused
-              ? 'border-teal-500 bg-white/10 w-[180px]'
-              : 'border-white/20 bg-white/5 w-[120px]'
-          )}
-        >
-          <Search size={13} className="text-white/50 shrink-0" />
-          <input
-            type="text"
-            placeholder="⌘K 搜尋"
-            className="bg-transparent border-none outline-none text-[12px] w-full placeholder:text-white/40 text-white"
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-        </div>
-
-        <button className="relative p-1.5 rounded-md hover:bg-white/10 transition-colors duration-200">
-          <Bell size={16} className="text-white/70" />
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-teal-500 rounded-full" />
-        </button>
-
         {/* User Avatar & Menu */}
         {systemUser && (
           <div className="relative">

@@ -1,11 +1,11 @@
-import { FileText, DollarSign, ListTodo, Video } from 'lucide-react';
+import { FileText, DollarSign, FolderKanban, Megaphone } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
 const shortcuts = [
   { id: 'report', label: '提交日報', icon: FileText, module: 'day-report', subModule: 'submit', color: 'bg-teal-50 text-teal-600' },
   { id: 'quote', label: '報價單列表', icon: DollarSign, module: 'quotation', subModule: 'list', color: 'bg-amber-50 text-amber-600' },
-  { id: 'task', label: '新增任務', icon: ListTodo, module: 'project', subModule: 'new', color: 'bg-blue-50 text-blue-600' },
-  { id: 'video', label: '上傳影片', icon: Video, module: 'video', subModule: 'coordination', color: 'bg-rose-50 text-rose-600' },
+  { id: 'pitch', label: 'Pitching', icon: FolderKanban, module: 'quotation', subModule: 'pitching', color: 'bg-blue-50 text-blue-600' },
+  { id: 'ads', label: 'Google Ads', icon: Megaphone, module: 'marketing', subModule: 'google-ads', color: 'bg-rose-50 text-rose-600' },
 ];
 
 export function QuickActions() {

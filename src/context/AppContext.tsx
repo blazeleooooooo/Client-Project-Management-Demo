@@ -97,6 +97,7 @@ const HIDDEN_DEMO_MODULES = new Set([
   'supplier',
   'tools-center',
   'finance',
+  'report',
 ]);
 
 export const mainMenuItems: MainMenuItem[] = [

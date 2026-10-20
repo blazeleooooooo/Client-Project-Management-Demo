@@ -108,8 +108,8 @@ export function useRecentActivity() {
           action: `取錄了藝人 ${safeName(a as any)}`,
           time: formatRelative(ts),
           occurredAt: ts,
-          navModule: 'talent',
-          navSubModule: 'list',
+          navModule: 'quotation',
+          navSubModule: 'clients',
         });
       });
 
@@ -122,8 +122,8 @@ export function useRecentActivity() {
           action: `不錄用藝人 ${safeName(a as any)}`,
           time: formatRelative(ts),
           occurredAt: ts,
-          navModule: 'talent',
-          navSubModule: 'interviews',
+          navModule: 'quotation',
+          navSubModule: 'clients',
         });
       });
 
